@@ -13,45 +13,32 @@
 ** ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 ** OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 *)
-%{#
-#include <ucontext.h>
-#include "contrib/task/CATS/task.cats"
-%}
-
-
 #define ATS_STALOADFLAG 0 // no need for staloading at run-time
 
 staload "libats/SATS/linqueue_arr.sats"
 
-abst@ype ucontext_t = $extype "ucontext_t"
-
-
 absviewtype task (l:addr)
 viewtypedef task = [l:agz] task l
 
-viewtypedef scheduler = QUEUE0 (task)
+absviewtype scheduler (l:addr) = ptr l
+viewtypedef scheduler = [l:agz] scheduler l
 
-(* Heap allocation of schedulers *)
-fun scheduler_new (): [l:agz] (free_gc_v (scheduler?, l), scheduler @ l | ptr l)
-fun scheduler_free {l:agz} (pfgc: free_gc_v (scheduler?, l), pfat: scheduler @ l | p: ptr l): void
+fun scheduler_new (): scheduler
+fun scheduler_free (sch: scheduler): void
 
-(* Used for innitializing stack allocated schedulers *)
-fun scheduler_initialize (s: &scheduler? >> scheduler):<> void
-fun scheduler_uninitialize (s: &scheduler >> scheduler?): void
+fun scheduler_run {l:agz} (s: !scheduler l): void
 
-fun scheduler_run (s: &scheduler): void
+absviewtype scheduler_v (l:addr) = ptr l
 
-absview scheduler_v (l:addr)
-
-fun settaskscheduler {l:agz} (pf: scheduler @ l | p: ptr l): (scheduler_v l | void) = "mac#settaskscheduler"
-fun gettaskscheduler (): [l:agz] (scheduler @ l -<lin,prf> void, scheduler @ l | ptr l) = "mac#gettaskscheduler"
-fun cleartaskscheduler {l:agz} (pf: scheduler_v l | (* *)): (scheduler @ l | void) = "mac#cleartaskscheduler"
-fun setcontextstack {l:agz} {n:nat} (pf: !array_v (char?, n, l) | ucp: &ucontext_t, stack: ptr l, size: size_t n): void = "mac#setcontextstack"
-fun getschedulerctx (): [l:agz] (ucontext_t @ l -<lin,prf> void, ucontext_t @ l | ptr l) = "mac#getschedulerctx"
+fun set_global_scheduler {l:agz} (sch: !scheduler l >> scheduler_v l): void = "mac#set_global_scheduler"
+fun get_global_scheduler (): [l:agz] (scheduler l -<lin,prf> void | scheduler l) = "mac#get_global_scheduler"
+fun unset_global_scheduler {l:agz} (sch: !scheduler_v l >> scheduler l): void = "mac#unset_global_scheduler"
+fun run_global_scheduler (): void 
 
 viewtypedef task_fn = () -<cloptr1> void
-fun task_create (func: task_fn): [l:agz] task l
+fun task_create {n:nat} (stack_size: size_t n, func: task_fn): [l:agz] task l
 fun task_free {l:agz} (tsk: task l): void
 fun task_schedule {l:agz} (tsk: task l): void
+fun task_spawn {n:nat} (stack_size: size_t n, func: task_fn): void
 fun task_yield (): void
 

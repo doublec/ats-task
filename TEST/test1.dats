@@ -2,41 +2,30 @@ staload "contrib/task/SATS/task.sats"
 dynload "contrib/task/DATS/task.dats"
 
 implement main (argc, argv) = {
-  var sch: scheduler?
-  val () = scheduler_initialize (sch)
+  var sch = scheduler_new ()
+  val () = set_global_scheduler (sch)
 
-  val (pf | ()) = settaskscheduler (view@ sch | &sch)
-
-  val t1 = task_create (lam () => {
+  val () = task_spawn (16384, lam () => {
                           val () = print ("hello\n")
                           val () = task_yield ()
                           val () = print ("world\n")
-                        })
-  var !stack with pf_stack = @[char?][16384]()
-  val (pff, at | s) = getschedulerctx ()
-  val () = setcontextstack (pf_stack | !s, stack, 16384)
-  prval () = pff (at)
-  val () = task_schedule (t1)
+                       })
 
-  val t2 = task_create (lam () => {
+  val () = task_spawn (16384, lam () => {
+                          val () = task_spawn (16384, lam () => {
+                                                 val () = print ("Task start\n")
+                                                 val () = task_yield ()
+                                                 val () = print ("Task end\n")
+                                               })
                           val () = print ("Test1\n")
                           val () = task_yield ()
                           val () = print ("Test2\n")
-                        })
-  var !stack with pf_stack = @[char?][16384]()
-  val (pff, at | s) = getschedulerctx ()
-  val () = setcontextstack (pf_stack | !s, stack, 16384)
-  prval () = pff (at)
-  val () = task_schedule (t2)
+                       })
 
-  val (pff_s, pf_s | s) = gettaskscheduler ()
-  val () = scheduler_run (!s)
-  prval () = pff_s (pf_s)
+  val () = run_global_scheduler ()
 
-  val (pf | _) = cleartaskscheduler (pf | (* *))
-  prval () = view@ sch := pf
-
-  val () = scheduler_uninitialize (sch)
+  val () = unset_global_scheduler (sch)
+  val () = scheduler_free (sch)
 
   val () = printf ("done\n", @()) 
 }
