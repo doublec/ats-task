@@ -26,22 +26,22 @@ extern fun makecontext (ucp: &ucontext_t, func: () -<fun1> void, argc: int (*, .
 extern fun swapcontext (oucp: &ucontext_t, ucp: &ucontext_t): int = "mac#swapcontext"
 
 viewtypedef scheduler_state = @{
-                                 tasks= QUEUE0 (task),
-                                 ctx= ucontext_t,
-                                 running= Option_vt task
-                              }
+				 tasks= QUEUE0 (task),
+				 ctx= ucontext_t,
+				 running= Option_vt task
+			      }
 
 assume scheduler (l:addr) = @{ pfgc= free_gc_v (scheduler_state?, l), pfat= scheduler_state @ l, p= ptr l }
 
 viewtypedef  task_state (l:addr, n:int) = @{ 
-                                func= task_fn,
-                                p_stack= ptr l,
-                                pfgc_stack= free_gc_v (char?, n, l),
-                                pfat_stack= array_v (char?, n, l),
-                                stack_size= size_t n,
-                                ctx= ucontext_t,
-                                complete= bool
-                              }
+				func= task_fn,
+				p_stack= ptr l,
+				pfgc_stack= free_gc_v (char?, n, l),
+				pfat_stack= array_v (char?, n, l),
+				stack_size= size_t n,
+				ctx= ucontext_t,
+				complete= bool
+			      }
 viewtypedef task_state = [n:nat] [l:agz] task_state (l, n)
 
 assume task (l:addr) = @{ pfgc= free_gc_v (task_state?, l), pfat= task_state @ l, p= ptr l }
@@ -71,8 +71,8 @@ implement scheduler_free (sch) = {
   val () = queue_uninitialize_vt {task} (sch.p->tasks)
   
   val () = case+ sch.p->running of
-           | ~None_vt () => ()
-           | ~Some_vt task => task_free (task)
+	   | ~None_vt () => ()
+	   | ~Some_vt task => task_free (task)
 
   prval () = sch.pfat := pfat
   val () = ptr_free (sch.pfgc, sch.pfat | sch.p)
@@ -82,8 +82,8 @@ fn check_scheduler_cap (sch: &scheduler_state): void = {
   val sz = queue_size (sch.tasks)
   val cap = queue_cap (sch.tasks)
   val () = if cap > 0 && sz = cap then {
-             val () = queue_update_capacity<task> (sch.tasks, cap * 2)
-           }  
+	     val () = queue_update_capacity<task> (sch.tasks, cap * 2)
+	   }  
 }
  
 implement scheduler_run (sch) = {
@@ -93,28 +93,30 @@ implement scheduler_run (sch) = {
       val () = option_vt_unnone (s.running)
       val tsk = queue_remove<task> (s.tasks)
       val (pff_running | running) = __borrow (tsk) where {
-                                      extern castfn __borrow {l:agz} (tsk: !task l): (task l -<lin,prf> void | task l)
-                                    }
+				      extern castfn __borrow {l:agz} (tsk: !task l): (task l -<lin,prf> void | task l)
+				    }
       val () = s.running := Some_vt (tsk)
+
       prval pfat = running.pfat
       val r = swapcontext (s.ctx, running.p->ctx)
       val () = assertloc (r = 0)
       prval () = running.pfat := pfat
       prval () = pff_running (running)
-      val () = assertloc (option_vt_is_some (s.running))
-      val tsk = option_vt_unsome<task> (s.running)
-      val () = s.running := None_vt ()
+      val () = if option_vt_is_none (s.running) then () else {
+                 val tsk = option_vt_unsome<task> (s.running)
+                 val () = s.running := None_vt ()
 
-      prval pfat = tsk.pfat
-      val () = if tsk.p->complete then {
-                 prval () = tsk.pfat := pfat
-                 val () = task_free (tsk)
-               }
-               else {
-                 prval () = tsk.pfat := pfat
-                 val () = check_scheduler_cap (s)
-                 val () = assertloc (queue_size (s.tasks) < queue_cap (s.tasks)) 
-                 val () = queue_insert<task> (s.tasks, tsk)
+                 prval pfat = tsk.pfat
+                 val () = if tsk.p->complete then {
+	  	   prval () = tsk.pfat := pfat
+		   val () = task_free (tsk)
+	         }
+	         else {
+		   prval () = tsk.pfat := pfat
+		   val () = check_scheduler_cap (s)
+		   val () = assertloc (queue_size (s.tasks) < queue_cap (s.tasks)) 
+		   val () = queue_insert<task> (s.tasks, tsk)
+	         }
                }
 
       val () = run (s)
@@ -130,6 +132,53 @@ implement run_global_scheduler () = {
   val () = scheduler_run (s)
   prval () = pff_s (s)
 } 
+
+implement global_scheduler_halt () = let
+  val (pff_s | s) = get_global_scheduler ()
+  prval pfat = s.pfat
+  val () = assertloc (option_vt_is_some (s.p->running))
+  val tsk = option_vt_unsome<task> (s.p->running)
+  val running = __ref (tsk) where {
+		  extern castfn __ref {l:agz} (tsk: !task l): task l
+		}
+  val () = s.p->running := Some_vt running
+  prval () = s.pfat := pfat
+  prval () = pff_s (s)
+in
+  tsk
+end
+
+
+implement global_scheduler_resume () = {
+  val (pff_sch | sch) = get_global_scheduler ()
+  prval pfat_sch = sch.pfat
+  val () = assertloc (option_vt_is_some (sch.p->running))
+  val tsk = option_vt_unsome<task> (sch.p->running)
+
+  val () = sch.p->running := None_vt ()
+
+  prval pfat_task = tsk.pfat
+  val r = swapcontext (tsk.p->ctx, sch.p->ctx)
+  val () = assertloc (r = 0)
+
+   prval () = tsk.pfat := pfat_task 
+   prval () = __consume (tsk) where {
+	       extern prfun __consume {l:agz} (t: task l): void
+	     }
+
+  prval () = sch.pfat := pfat_sch
+  prval () = pff_sch (sch)
+}
+
+implement global_scheduler_queue_task (tsk) = {
+  val (pff_s | s) = get_global_scheduler ()
+  prval pfat = s.pfat
+  val () = check_scheduler_cap (!(s.p))
+  val () = assertloc (queue_size (s.p->tasks) < queue_cap (s.p->tasks)) 
+  val () = queue_insert<task> (s.p->tasks, tsk)
+  prval () = s.pfat := pfat
+  prval () = pff_s (s)
+}   
 
 %{
 void setcontextstate (ucontext_t* ctx, char* stack, int stack_size, ucontext_t* sch_ctx) {
@@ -189,8 +238,8 @@ implement task_create (ss, func) = let
   prval () = pff_sch (sch)
 
   val () = makecontext (!p_task.ctx, task_callback, 1, !p_task) where {
-             extern fun makecontext (ucp: &ucontext_t, cb: (&task_state) -<fun1> void, argc: int, tsk: &task_state) : void = "mac#makecontext" 
-           }
+	     extern fun makecontext (ucp: &ucontext_t, cb: (&task_state) -<fun1> void, argc: int, tsk: &task_state) : void = "mac#makecontext" 
+	   }
 in
   @{ pfgc= pfgc_task, pfat= pfat_task, p= p_task }
 end
@@ -221,17 +270,30 @@ implement task_yield () = {
   val () = assertloc (option_vt_is_some (sch.p->running))
   val tsk = option_vt_unsome<task> (sch.p->running)
   val (pff_running | running) = __borrow (tsk) where {
-                                 extern castfn __borrow {l:agz} (tsk: !task l): (task l -<lin,prf> void | task l)
-                                }
+				 extern castfn __borrow {l:agz} (tsk: !task l): (task l -<lin,prf> void | task l)
+				}
   val () = sch.p->running := Some_vt tsk
- 
+
   prval pfat_tsk = running.pfat
   val r = swapcontext (running.p->ctx, sch.p->ctx)
   val () = assertloc (r = 0)
   prval () = running.pfat := pfat_tsk
+
   prval () = pff_running (running)
   prval () = sch.pfat := pfat_sch
   prval () = pff_sch (sch)
 }
   
+implement task_queue_count () = let
+  val (pff_sch | sch) = get_global_scheduler ()
+  prval pfat_sch = sch.pfat
+
+  val n = queue_size (sch.p->tasks)
+
+  prval () = sch.pfat := pfat_sch
+  prval () = pff_sch (sch)
+in
+  n
+end
+
 

@@ -31,9 +31,18 @@ fun scheduler_run {l:agz} (s: !scheduler l): void
 absviewtype scheduler_v (l:addr) = ptr l
 
 fun set_global_scheduler {l:agz} (sch: !scheduler l >> scheduler_v l): void = "mac#set_global_scheduler"
-fun get_global_scheduler (): [l:agz] (scheduler l -<lin,prf> void | scheduler l) = "mac#get_global_scheduler"
+fun get_global_scheduler ():<> [l:agz] (scheduler l -<lin,prf> void | scheduler l) = "mac#get_global_scheduler"
 fun unset_global_scheduler {l:agz} (sch: !scheduler_v l >> scheduler l): void = "mac#unset_global_scheduler"
 fun run_global_scheduler (): void 
+
+(* Returns the current running task, and schedules the next running
+   task but doesn't switch to it. Caller must later call 'global_scheduler_resume'
+   to start running the next running task. During these two calls code can
+   save the task and manually queue it later. When resumed it will execute at the
+   pointer after 'global_scheduler_resume' was called. *)
+fun global_scheduler_halt (): task
+fun global_scheduler_resume (): void
+fun global_scheduler_queue_task (tsk: task): void 
 
 viewtypedef task_fn = () -<cloptr1> void
 fun task_create {n:nat} (stack_size: size_t n, func: task_fn): [l:agz] task l
@@ -41,4 +50,5 @@ fun task_free {l:agz} (tsk: task l): void
 fun task_schedule {l:agz} (tsk: task l): void
 fun task_spawn {n:nat} (stack_size: size_t n, func: task_fn): void
 fun task_yield (): void
+fun task_queue_count ():<> size_t
 
