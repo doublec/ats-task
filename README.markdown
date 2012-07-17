@@ -52,10 +52,13 @@ TODO
 
 * Make set_global_scheduler set it for the current CPU thread, allowing 
   a scheduler to run per CPU.
+* Add intertask communication via channels.
 * Integrate with my ATS libevent wrapper to allow writing libevent based
   applications in a non-callback style. This was my original motivation
-  for writing this library.
-* Add intertask communication via channels.
+  for writing this library. This is now partially supported. See the
+  'test2' example in the TEST directory which demonstrates downloading
+  URL's using libevent without using callbacks in the main code (See the
+  'do_main' function).
 
 Contact
 -------
