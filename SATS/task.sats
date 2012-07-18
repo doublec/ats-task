@@ -45,10 +45,14 @@ fun global_scheduler_resume (): void
 fun global_scheduler_queue_task (tsk: task): void 
 
 viewtypedef task_fn = () -<cloptr1> void
+viewtypedef task_fn_lin = () -<lincloptr1> void
+
 fun task_create {n:nat} (stack_size: size_t n, func: task_fn): [l:agz] task l
 fun task_free {l:agz} (tsk: task l): void
 fun task_schedule {l:agz} (tsk: task l): void
 fun task_spawn {n:nat} (stack_size: size_t n, func: task_fn): void
+fun task_spawn_lin {n:nat} (stack_size: size_t n, func: task_fn_lin): void
+
 fun task_yield (): void
 fun task_queue_count ():<> size_t
 

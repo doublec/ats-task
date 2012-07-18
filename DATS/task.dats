@@ -9,6 +9,8 @@ staload _ = "libats/DATS/linqueue_arr.dats"
 staload _ = "prelude/DATS/array.dats"
 staload _ = "libats/ngc/DATS/deque_arr.dats"
 
+staload "prelude/SATS/unsafe.sats"
+
 %{^
 #include <ucontext.h>
 
@@ -263,6 +265,10 @@ implement task_schedule (tsk) = {
 }
 
 implement task_spawn (ss, func) = task_schedule (task_create (ss, func))
+implement task_spawn_lin (ss, func) = task_schedule (task_create (ss, __cast(func))) where {
+                                        extern castfn __cast (f: task_fn_lin): task_fn
+                                      }
+
 
 implement task_yield () = {
   val (pff_sch | sch) = get_global_scheduler ()
