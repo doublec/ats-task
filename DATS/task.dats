@@ -30,7 +30,8 @@ extern fun swapcontext (oucp: &ucontext_t, ucp: &ucontext_t): int = "mac#swapcon
 viewtypedef scheduler_state = @{
 				 tasks= QUEUE0 (task),
 				 ctx= ucontext_t,
-				 running= Option_vt task
+				 running= Option_vt task,
+                                 paused= int
 			      }
 
 assume scheduler (l:addr) = @{ pfgc= free_gc_v (scheduler_state?, l), pfat= scheduler_state @ l, p= ptr l }
@@ -53,6 +54,7 @@ implement scheduler_new () = let
   val (pfgc, pfat | p) = ptr_alloc<scheduler_state> ()
   val () = queue_initialize<task> (!p.tasks, 10)
   val () = !p.running := None_vt 
+  val () = !p.paused := 0
   val r = getcontext (!p.ctx)
   val () = assertloc (r = 0)
 in
@@ -144,6 +146,7 @@ implement global_scheduler_halt () = let
 		  extern castfn __ref {l:agz} (tsk: !task l): task l
 		}
   val () = s.p->running := Some_vt running
+
   prval () = s.pfat := pfat
   prval () = pff_s (s)
 in
@@ -158,6 +161,7 @@ implement global_scheduler_resume () = {
   val tsk = option_vt_unsome<task> (sch.p->running)
 
   val () = sch.p->running := None_vt ()
+  val () = sch.p->paused := sch.p->paused + 1
 
   prval pfat_task = tsk.pfat
   val r = swapcontext (tsk.p->ctx, sch.p->ctx)
@@ -178,6 +182,7 @@ implement global_scheduler_queue_task (tsk) = {
   val () = check_scheduler_cap (!(s.p))
   val () = assertloc (queue_size (s.p->tasks) < queue_cap (s.p->tasks)) 
   val () = queue_insert<task> (s.p->tasks, tsk)
+  val () = s.p->paused := s.p->paused - 1
   prval () = s.pfat := pfat
   prval () = pff_s (s)
 }   
@@ -294,7 +299,7 @@ implement task_queue_count () = let
   val (pff_sch | sch) = get_global_scheduler ()
   prval pfat_sch = sch.pfat
 
-  val n = queue_size (sch.p->tasks)
+  val n = queue_size (sch.p->tasks) + sch.p->paused
 
   prval () = sch.pfat := pfat_sch
   prval () = pff_sch (sch)
