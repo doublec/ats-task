@@ -299,7 +299,19 @@ implement task_queue_count () = let
   val (pff_sch | sch) = get_global_scheduler ()
   prval pfat_sch = sch.pfat
 
-  val n = queue_size (sch.p->tasks) + sch.p->paused
+  val n = queue_size (sch.p->tasks)
+
+  prval () = sch.pfat := pfat_sch
+  prval () = pff_sch (sch)
+in
+  n
+end
+
+implement task_paused_count () = let
+  val (pff_sch | sch) = get_global_scheduler ()
+  prval pfat_sch = sch.pfat
+
+  val n = size_of_int (sch.p->paused)
 
   prval () = sch.pfat := pfat_sch
   prval () = pff_sch (sch)

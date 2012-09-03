@@ -55,4 +55,5 @@ fun task_spawn_lin {n:nat} (stack_size: size_t n, func: task_fn_lin): void
 
 fun task_yield (): void
 fun task_queue_count ():<> size_t
+fun task_paused_count ():<> size_t
 
