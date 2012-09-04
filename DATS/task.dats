@@ -275,25 +275,29 @@ implement task_spawn_lin (ss, func) = task_schedule (task_create (ss, __cast(fun
                                       }
 
 
-implement task_yield () = {
-  val (pff_sch | sch) = get_global_scheduler ()
-  prval pfat_sch = sch.pfat
-  val () = assertloc (option_vt_is_some (sch.p->running))
-  val tsk = option_vt_unsome<task> (sch.p->running)
-  val (pff_running | running) = __borrow (tsk) where {
-				 extern castfn __borrow {l:agz} (tsk: !task l): (task l -<lin,prf> void | task l)
-				}
-  val () = sch.p->running := Some_vt tsk
+implement task_yield () = let
+  fn yield (): void = {
+    val (pff_sch | sch) = get_global_scheduler ()
+    prval pfat_sch = sch.pfat
+    val () = assertloc (option_vt_is_some (sch.p->running))
+    val tsk = option_vt_unsome<task> (sch.p->running)
+    val (pff_running | running) = __borrow (tsk) where {
+  				    extern castfn __borrow {l:agz} (tsk: !task l): (task l -<lin,prf> void | task l)
+ 				  }
+    val () = sch.p->running := Some_vt tsk
 
-  prval pfat_tsk = running.pfat
-  val r = swapcontext (running.p->ctx, sch.p->ctx)
-  val () = assertloc (r = 0)
-  prval () = running.pfat := pfat_tsk
+    prval pfat_tsk = running.pfat
+    val r = swapcontext (running.p->ctx, sch.p->ctx)
+    val () = assertloc (r = 0)
+    prval () = running.pfat := pfat_tsk
 
-  prval () = pff_running (running)
-  prval () = sch.pfat := pfat_sch
-  prval () = pff_sch (sch)
-}
+    prval () = pff_running (running)
+    prval () = sch.pfat := pfat_sch
+    prval () = pff_sch (sch)
+  }
+in
+  if task_queue_count () > 0 then yield ()
+end
   
 implement task_queue_count () = let
   val (pff_sch | sch) = get_global_scheduler ()

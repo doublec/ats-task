@@ -139,10 +139,9 @@ fn do_main (): void = {
 fun event_loop_task (events_queued: bool): void = let
   prval vbox pf = pf_the_base
   val () = $effmask_ref task_yield ()
-
 in
   (* If no events are queued and if no tasks are also queued we can exit *)
-  if (not events_queued && task_queue_count () = 0) then ()
+  if (not events_queued && task_queue_count () + task_paused_count () = 0) then ()
 
   (* We're the only active task left, safe to block *)
   else if task_queue_count () = 0 then $effmask_ref event_loop_task ($effmask_ref event_base_loop (the_base, EVLOOP_ONCE) = 0)
