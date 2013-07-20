@@ -1,5 +1,5 @@
-staload "contrib/task/SATS/task.sats"
-dynload "contrib/task/DATS/task.dats"
+staload "task/SATS/task.sats"
+dynload "task/DATS/task.dats"
 
 implement main (argc, argv) = {
   var sch = scheduler_new ()

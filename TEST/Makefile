@@ -2,8 +2,9 @@
 
 ATSHOMEQ="$(ATSHOME)"
 ATSCC=$(ATSHOMEQ)/bin/atscc
+ATSCCLIB=$(shell pwd)/../..
 ATSCTRB=\
-  $(ATSHOMEQ)/contrib/task/atsctrb_task.o
+  $(ATSCCLIB)/task/atsctrb_task.o
 ######
 
 checkall: compall cleanall
@@ -17,10 +18,10 @@ compall: \
 ######
 
 test1: test1.dats
-	$(ATSCC) $(CFLAGS) -o $@ $< $(ATSCTRB) $(LIBS)
+	$(ATSCC) -I$(ATSCCLIB) -IATS$(ATSCCLIB) $(CFLAGS) -o $@ $< $(ATSCTRB) $(LIBS)
 
 test2: test2.dats
-	$(ATSCC) $(CFLAGS) `pkg-config libevent --cflags` -o $@ $< $(ATSCTRB) $(LIBS) `pkg-config libevent --libs`
+	$(ATSCC) -I$(ATSCCLIB) -IATS$(ATSCCLIB) $(CFLAGS) `pkg-config libevent --cflags` -o $@ $< $(ATSCTRB) $(LIBS) `pkg-config libevent --libs`
 
 ######
 

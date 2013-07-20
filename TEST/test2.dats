@@ -1,8 +1,8 @@
 staload "prelude/SATS/unsafe.sats"
-staload "contrib/libevent/SATS/libevent.sats"
+staload "libevent/SATS/libevent.sats"
 
-staload "contrib/task/SATS/task.sats"
-dynload "contrib/task/DATS/task.dats"
+staload "task/SATS/task.sats"
+dynload "task/DATS/task.dats"
 
 staload _ = "prelude/DATS/array.dats"
 

@@ -7,9 +7,13 @@ ucontext switches.
 Install
 -------
 
-Clone in the ATS 'contrib' directory with the name 'task':
+The library is best used by cloning from under a parent directory that
+is used to store ATS libraries. This directory can then be passed to
+the 'atscc' command line using the '-I' and '-IATS' options to be
+added to the include path. In the examples below this directory is
+$ATSCCLIB.
 
-    cd $ATSHOME/contrib
+    cd $ATSCCLIB
     git clone git://github.com/doublec/ats-task task
     cd task
     make

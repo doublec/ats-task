@@ -8,6 +8,7 @@
 ######
 ATSHOMEQ="$(ATSHOME)"
 ATSCC=$(ATSHOMEQ)/bin/atscc -Wall
+ATSCCLIB=$(shell pwd)/..
 
 ######
 
@@ -21,7 +22,7 @@ atsctrb_task.o: task_dats.o
 ######
 
 task_dats.o: DATS/task.dats
-	$(ATSCC) $(CFLAGS) -o $@ -c $<
+	$(ATSCC) -I$(ATSCCLIB) -IATS$(ATSCCLIB) $(CFLAGS) -o $@ -c $<
 
 ######
 

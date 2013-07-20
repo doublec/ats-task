@@ -1,4 +1,4 @@
-staload "contrib/task/SATS/task.sats"
+staload "task/SATS/task.sats"
 
 staload _ = "prelude/DATS/pointer.dats"
 staload _ = "prelude/DATS/array.dats"
